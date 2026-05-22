@@ -1,8 +1,8 @@
 ---
 title: LLM Chat
-emoji: ✦
+emoji: 💬
 colorFrom: indigo
-colorTo: violet
+colorTo: purple
 sdk: docker
 pinned: false
 license: mit

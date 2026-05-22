@@ -7,7 +7,179 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/css/main.css" />
+  <style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #080810;
+  --surface: rgba(255,255,255,0.04);
+  --surface-hover: rgba(255,255,255,0.07);
+  --border: rgba(255,255,255,0.08);
+  --border-focus: rgba(99,102,241,0.6);
+  --text: #e2e8f0;
+  --muted: #64748b;
+  --accent-1: #6366f1;
+  --accent-2: #a78bfa;
+  --user-bg: linear-gradient(135deg, #6366f1, #8b5cf6);
+  --bot-bg: rgba(255,255,255,0.05);
+  --radius: 18px;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  overflow: hidden;
+}
+
+/* orbs */
+.bg-orbs { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.orb { position: absolute; border-radius: 50%; filter: blur(120px); opacity: 0.18; }
+.orb-1 { width: 600px; height: 600px; background: #6366f1; top: -200px; left: -200px; animation: drift 12s ease-in-out infinite alternate; }
+.orb-2 { width: 400px; height: 400px; background: #8b5cf6; bottom: -100px; right: -100px; animation: drift 15s ease-in-out infinite alternate-reverse; }
+.orb-3 { width: 300px; height: 300px; background: #06b6d4; top: 40%; left: 50%; animation: drift 18s ease-in-out infinite alternate; }
+@keyframes drift { from { transform: translate(0,0); } to { transform: translate(40px, 30px); } }
+
+/* layout */
+.shell {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column;
+  height: 100vh; max-width: 860px;
+  margin: 0 auto; padding: 0 16px;
+}
+
+/* header */
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 0 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-text {
+  font-size: 1.1rem; font-weight: 700;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  letter-spacing: -0.02em;
+}
+.model-badge {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 99px; padding: 4px 12px;
+  font-size: 0.78rem; color: var(--muted);
+}
+.dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #22c55e; box-shadow: 0 0 6px #22c55e;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* chat area */
+.chat-area { flex: 1; overflow-y: auto; padding: 24px 0; scroll-behavior: smooth; }
+.chat-area::-webkit-scrollbar { width: 4px; }
+.chat-area::-webkit-scrollbar-track { background: transparent; }
+.chat-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+/* welcome */
+.welcome {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; text-align: center; min-height: 60vh; gap: 12px;
+}
+.welcome-icon {
+  font-size: 2.5rem;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.welcome h1 {
+  font-size: 2rem; font-weight: 700; letter-spacing: -0.03em;
+  background: linear-gradient(135deg, #fff 40%, var(--accent-2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.welcome p { color: var(--muted); font-size: 0.95rem; }
+.chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 8px; }
+.chip {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 99px; color: var(--text); font-size: 0.82rem;
+  padding: 6px 14px; cursor: pointer; transition: background 0.2s, border-color 0.2s;
+}
+.chip:hover { background: var(--surface-hover); border-color: var(--border-focus); }
+
+/* messages */
+.messages { display: flex; flex-direction: column; gap: 20px; }
+.msg { display: flex; gap: 10px; align-items: flex-start; }
+.msg.user { flex-direction: row-reverse; }
+.avatar {
+  width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.8rem; font-weight: 600;
+}
+.msg.user .avatar { background: linear-gradient(135deg, var(--accent-1), var(--accent-2)); color: #fff; }
+.msg.bot .avatar { background: var(--surface); border: 1px solid var(--border); color: var(--accent-2); }
+.bubble {
+  max-width: 78%; padding: 12px 16px; border-radius: var(--radius);
+  font-size: 0.93rem; line-height: 1.65; word-break: break-word;
+}
+.msg.user .bubble { background: var(--user-bg); color: #fff; border-bottom-right-radius: 5px; }
+.msg.bot .bubble { background: var(--bot-bg); border: 1px solid var(--border); border-bottom-left-radius: 5px; color: var(--text); backdrop-filter: blur(10px); }
+.bubble img { max-width: 260px; border-radius: 10px; margin-bottom: 8px; display: block; }
+.bubble pre { background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 8px; padding: 12px; overflow-x: auto; margin: 8px 0; font-size: 0.83rem; }
+.bubble code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+.cursor::after { content: '▋'; animation: blink 0.8s step-end infinite; color: var(--accent-2); }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+/* model info tag */
+.model-tag {
+  display: inline-block; margin-top: 6px; font-size: 0.72rem;
+  color: var(--muted); opacity: 0.7;
+}
+
+/* input bar */
+.input-bar { flex-shrink: 0; padding: 12px 0 20px; border-top: 1px solid var(--border); }
+.image-preview-wrap { position: relative; display: inline-block; margin-bottom: 10px; }
+#image-preview { height: 72px; border-radius: 10px; border: 1px solid var(--border); object-fit: cover; }
+.remove-img {
+  position: absolute; top: -6px; right: -6px; width: 20px; height: 20px;
+  border-radius: 50%; background: #ef4444; border: none; color: #fff;
+  font-size: 0.65rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.input-row {
+  display: flex; align-items: flex-end; gap: 10px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 10px 12px;
+  transition: border-color 0.2s;
+}
+.input-row:focus-within { border-color: var(--border-focus); }
+.attach-btn {
+  flex-shrink: 0; color: var(--muted); cursor: pointer; padding: 4px;
+  border-radius: 8px; transition: color 0.2s, background 0.2s; display: flex; align-items: center;
+}
+.attach-btn:hover { color: var(--text); background: var(--surface-hover); }
+#msg-input {
+  flex: 1; background: transparent; border: none; outline: none;
+  color: var(--text); font-family: inherit; font-size: 0.93rem;
+  resize: none; max-height: 200px; overflow-y: auto; line-height: 1.5;
+}
+#msg-input::placeholder { color: var(--muted); }
+.send-btn {
+  flex-shrink: 0; width: 36px; height: 36px; border-radius: 10px;
+  border: none; background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.2s, transform 0.1s;
+}
+.send-btn:disabled { opacity: 0.35; cursor: default; }
+.send-btn:not(:disabled):hover { opacity: 0.88; }
+.send-btn:not(:disabled):active { transform: scale(0.94); }
+
+/* spinner for loading state */
+.spinner {
+  display: inline-block; width: 16px; height: 16px;
+  border: 2px solid var(--border); border-top-color: var(--accent-2);
+  border-radius: 50%; animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+  </style>
 </head>
 <body>
   <div class="bg-orbs">
@@ -33,7 +205,7 @@
       </div>
       <div class="model-badge">
         <span class="dot"></span>
-        <span id="model-label">claude-sonnet-4-6</span>
+        <span id="model-label">GPT-2 · from scratch</span>
       </div>
     </header>
 
@@ -41,12 +213,12 @@
       <div class="welcome" id="welcome">
         <div class="welcome-icon">✦</div>
         <h1>How can I help you?</h1>
-        <p>Ask anything — text, code, or drop an image below.</p>
+        <p>Running GPT-2 inference on a transformer built from scratch — no external API.</p>
         <div class="chips">
           <button class="chip" data-prompt="Explain attention mechanisms in transformers.">Attention mechanisms</button>
           <button class="chip" data-prompt="Write a Python async generator with type hints.">Python async gen</button>
-          <button class="chip" data-prompt="What's the CAP theorem? Give a real-world example.">CAP theorem</button>
-          <button class="chip" data-prompt="Describe this image in detail." data-image>Analyze an image</button>
+          <button class="chip" data-prompt="What's the CAP theorem?">CAP theorem</button>
+          <button class="chip" data-prompt="Describe the architecture of this model.">Model architecture</button>
         </div>
       </div>
       <div class="messages" id="messages"></div>
@@ -55,7 +227,7 @@
     <footer class="input-bar">
       <div class="image-preview-wrap" id="image-preview-wrap" style="display:none">
         <img id="image-preview" alt="preview" />
-        <button class="remove-img" id="remove-img" title="Remove image">✕</button>
+        <button class="remove-img" id="remove-img" title="Remove">✕</button>
       </div>
       <div class="input-row">
         <label class="attach-btn" for="file-input" title="Attach image">
@@ -66,12 +238,7 @@
           </svg>
         </label>
         <input type="file" id="file-input" accept="image/*" style="display:none" />
-        <textarea
-          id="msg-input"
-          placeholder="Message…"
-          rows="1"
-          autocomplete="off"
-        ></textarea>
+        <textarea id="msg-input" placeholder="Message…" rows="1" autocomplete="off"></textarea>
         <button class="send-btn" id="send-btn" disabled>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
             <line x1="22" y1="2" x2="11" y2="13"/>
@@ -82,6 +249,174 @@
     </footer>
   </div>
 
-  <script src="/static/js/main.js"></script>
+  <script>
+const state = { history: [], pendingImg: null, streaming: false };
+
+const chatArea   = document.getElementById('chat-area');
+const welcome    = document.getElementById('welcome');
+const messages   = document.getElementById('messages');
+const msgInput   = document.getElementById('msg-input');
+const sendBtn    = document.getElementById('send-btn');
+const fileInput  = document.getElementById('file-input');
+const imgPreview = document.getElementById('image-preview');
+const imgWrap    = document.getElementById('image-preview-wrap');
+const removeImg  = document.getElementById('remove-img');
+
+msgInput.addEventListener('input', () => {
+  msgInput.style.height = 'auto';
+  msgInput.style.height = msgInput.scrollHeight + 'px';
+  sendBtn.disabled = !msgInput.value.trim() && !state.pendingImg;
+});
+msgInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); }
+});
+sendBtn.addEventListener('click', submit);
+
+document.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    msgInput.value = chip.dataset.prompt;
+    msgInput.dispatchEvent(new Event('input'));
+    submit();
+  });
+});
+
+fileInput.addEventListener('change', () => {
+  const file = fileInput.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    const [header, b64] = dataUrl.split(',');
+    const mediaType = header.match(/:(.*?);/)[1];
+    state.pendingImg = { b64, mediaType, dataUrl };
+    imgPreview.src = dataUrl;
+    imgWrap.style.display = 'block';
+    sendBtn.disabled = false;
+  };
+  reader.readAsDataURL(file);
+  fileInput.value = '';
+});
+
+removeImg.addEventListener('click', () => {
+  state.pendingImg = null;
+  imgWrap.style.display = 'none';
+  imgPreview.src = '';
+  sendBtn.disabled = !msgInput.value.trim();
+});
+
+chatArea.addEventListener('dragover', (e) => e.preventDefault());
+chatArea.addEventListener('drop', (e) => {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) {
+    fileInput.files = e.dataTransfer.files;
+    fileInput.dispatchEvent(new Event('change'));
+  }
+});
+
+async function submit() {
+  const text = msgInput.value.trim();
+  if ((!text && !state.pendingImg) || state.streaming) return;
+
+  welcome.style.display = 'none';
+  const img = state.pendingImg;
+  state.pendingImg = null;
+  imgWrap.style.display = 'none';
+  imgPreview.src = '';
+  msgInput.value = '';
+  msgInput.style.height = 'auto';
+  sendBtn.disabled = true;
+  state.streaming = true;
+
+  appendMessage('user', text, img?.dataUrl);
+  const historySnapshot = state.history.slice();
+  state.history.push({ role: 'user', content: text });
+
+  const botBubble = appendMessage('bot', '', null, true);
+  botBubble.innerHTML = '<span class="spinner"></span>';
+  let reply = '';
+
+  try {
+    const res = await fetch('/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text, history: historySnapshot }),
+    });
+
+    if (!res.ok) throw new Error(await res.text());
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let firstToken = true;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      for (const line of chunk.split('\n')) {
+        if (!line.startsWith('data:')) continue;
+        const payload = line.slice(5).trim();
+        if (payload === '[DONE]') break;
+        try {
+          const { token } = JSON.parse(payload);
+          if (firstToken) { botBubble.innerHTML = ''; firstToken = false; }
+          reply += token;
+          botBubble.innerHTML = renderMarkdown(reply);
+          botBubble.classList.add('cursor');
+          scrollBottom();
+        } catch {}
+      }
+    }
+  } catch (err) {
+    botBubble.innerHTML = `<span style="color:#f87171">Error: ${err.message}</span>`;
+  } finally {
+    botBubble.classList.remove('cursor');
+    state.history.push({ role: 'assistant', content: reply });
+    state.streaming = false;
+    sendBtn.disabled = !msgInput.value.trim();
+    scrollBottom();
+  }
+}
+
+function appendMessage(role, text, imgDataUrl) {
+  const wrap = document.createElement('div');
+  wrap.className = `msg ${role}`;
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar';
+  avatar.textContent = role === 'user' ? 'U' : '✦';
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  if (imgDataUrl) {
+    const img = document.createElement('img');
+    img.src = imgDataUrl;
+    bubble.appendChild(img);
+  }
+  if (text) bubble.innerHTML = renderMarkdown(text);
+  wrap.appendChild(avatar);
+  wrap.appendChild(bubble);
+  messages.appendChild(wrap);
+  scrollBottom();
+  return bubble;
+}
+
+function scrollBottom() { chatArea.scrollTop = chatArea.scrollHeight; }
+
+function renderMarkdown(md) {
+  let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  s = s.replace(/```(\w*)\n?([\s\S]*?)```/g, (_,lang,code) =>
+    `<pre><code class="language-${lang}">${code.trimEnd()}</code></pre>`);
+  s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+  s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  s = s.replace(/\n/g, '<br/>');
+  return s;
+}
+
+// fetch and display model info
+fetch('/model-info').then(r => r.json()).then(d => {
+  document.getElementById('model-label').textContent =
+    `${d.model} · ${d.parameters_M}M params · from scratch`;
+}).catch(() => {});
+  </script>
 </body>
 </html>

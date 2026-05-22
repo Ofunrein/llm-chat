@@ -1,96 +1,162 @@
-"""FastAPI LLM Chat — streaming multimodal chat powered by Claude."""
+"""
+FastAPI LLM Chat — inference runs on our from-scratch GPT transformer.
+
+No external LLM API. Model weights: GPT-2 (open, free) loaded into
+our custom transformer implementation in model/transformer.py.
+"""
 
 from __future__ import annotations
 
+import asyncio
 import os
+import threading
+from collections.abc import AsyncGenerator
+from functools import lru_cache
 from typing import Any
 
-import anthropic
-from dotenv import load_dotenv
+import tiktoken
+import torch
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-load_dotenv()
+from model.load_gpt2 import load_gpt2
+from model.transformer import GPT
 
-app = FastAPI(title="LLM Chat", version="1.0.0")
+app = FastAPI(title="LLM Chat — From Scratch", version="1.0.0")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-_CLIENT = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
-_MODEL = os.getenv("MODEL", "claude-sonnet-4-6")
-_MAX_TOKENS = int(os.getenv("MAX_TOKENS", "4096"))
-_SYSTEM = os.getenv(
-    "SYSTEM_PROMPT",
-    "You are a helpful, concise, and thoughtful AI assistant. "
-    "When shown images, describe and analyze them carefully.",
-)
+_MODEL_SIZE = os.getenv("GPT2_MODEL", "gpt2")         # gpt2 | gpt2-medium | gpt2-large
+_MAX_NEW_TOKENS = int(os.getenv("MAX_NEW_TOKENS", "256"))
+_TEMPERATURE = float(os.getenv("TEMPERATURE", "0.8"))
+_TOP_K = int(os.getenv("TOP_K", "40"))
+_DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
+# ---------------------------------------------------------------------------
+# Model + tokenizer — loaded once on first request, cached forever
+# ---------------------------------------------------------------------------
+
+_model: GPT | None = None
+_enc: tiktoken.Encoding | None = None
+_lock = threading.Lock()
+
+
+def _get_model_and_enc() -> tuple[GPT, tiktoken.Encoding]:
+    global _model, _enc
+    if _model is None:
+        with _lock:
+            if _model is None:
+                enc = tiktoken.get_encoding("gpt2")
+                model = load_gpt2(_MODEL_SIZE)
+                model.to(_DEVICE)
+                model.eval()
+                _model, _enc = model, enc
+    return _model, _enc  # type: ignore[return-value]
+
+
+# ---------------------------------------------------------------------------
+# Inference helpers
+# ---------------------------------------------------------------------------
+
+_EOT = 50256  # <|endoftext|> in GPT-2 tokenizer
+
+
+def _build_prompt(history: list[dict[str, str]], message: str) -> str:
+    """Flatten chat history into a plain text prompt for GPT-2."""
+    lines: list[str] = []
+    for turn in history:
+        role = turn.get("role", "")
+        content = turn.get("content", "")
+        if isinstance(content, str):
+            lines.append(f"{role.capitalize()}: {content}")
+    lines.append(f"Human: {message}")
+    lines.append("Assistant:")
+    return "\n".join(lines)
+
+
+def _run_inference(prompt: str) -> str:
+    """Blocking inference — call in a thread to avoid blocking the event loop."""
+    model, enc = _get_model_and_enc()
+    ids = enc.encode(prompt)
+    # crop to leave room for generation
+    max_ctx = model.cfg.context_len - _MAX_NEW_TOKENS
+    ids = ids[-max_ctx:]
+    idx = torch.tensor([ids], device=_DEVICE)
+
+    with torch.no_grad():
+        out = model.generate(
+            idx,
+            max_new_tokens=_MAX_NEW_TOKENS,
+            temperature=_TEMPERATURE,
+            top_k=_TOP_K,
+        )
+
+    new_ids = out[0, len(ids):].tolist()
+    # stop at <|endoftext|> if generated
+    if _EOT in new_ids:
+        new_ids = new_ids[: new_ids.index(_EOT)]
+
+    return enc.decode(new_ids)
+
+
+async def _stream_tokens(text: str) -> AsyncGenerator[str, None]:
+    """Fake per-word streaming so the UI gets progressive output."""
+    import json
+
+    words = text.split(" ")
+    for i, word in enumerate(words):
+        token = word if i == len(words) - 1 else word + " "
+        yield f"data: {json.dumps({'token': token})}\n\n"
+        await asyncio.sleep(0.02)
+    yield "data: [DONE]\n\n"
+
+
+# ---------------------------------------------------------------------------
+# Routes
+# ---------------------------------------------------------------------------
 
 class ChatRequest(BaseModel):
     message: str = ""
-    image_b64: str | None = None
-    media_type: str | None = None
     history: list[dict[str, Any]] = []
-
-
-def _build_content(text: str, image_b64: str | None, media_type: str | None) -> Any:
-    if image_b64 and media_type:
-        return [
-            {
-                "type": "image",
-                "source": {
-                    "type": "base64",
-                    "media_type": media_type,
-                    "data": image_b64,
-                },
-            },
-            {"type": "text", "text": text or "What do you see in this image?"},
-        ]
-    return text
-
-
-async def _sse_generator(messages: list[dict[str, Any]]):
-    """Async generator yielding SSE-formatted chunks from Claude."""
-    import json
-
-    with _CLIENT.messages.stream(
-        model=_MODEL,
-        max_tokens=_MAX_TOKENS,
-        system=_SYSTEM,
-        messages=messages,
-    ) as stream:
-        for text in stream.text_stream:
-            yield f"data: {json.dumps({'token': text})}\n\n"
-    yield "data: [DONE]\n\n"
 
 
 @app.get("/", response_class=HTMLResponse)
 async def index() -> HTMLResponse:
     from pathlib import Path
-
-    html = Path("templates/index.html").read_text()
-    return HTMLResponse(content=html)
+    return HTMLResponse(content=Path("templates/index.html").read_text())
 
 
 @app.post("/chat")
 async def chat(req: ChatRequest) -> StreamingResponse:
-    if not req.message.strip() and not req.image_b64:
+    if not req.message.strip():
         raise HTTPException(status_code=400, detail="No input provided")
 
-    messages = list(req.history)
-    messages.append(
-        {"role": "user", "content": _build_content(req.message, req.image_b64, req.media_type)}
-    )
+    prompt = _build_prompt(req.history, req.message)
+
+    # run blocking inference in a thread pool so FastAPI stays async
+    loop = asyncio.get_event_loop()
+    reply = await loop.run_in_executor(None, _run_inference, prompt)
 
     return StreamingResponse(
-        _sse_generator(messages),
+        _stream_tokens(reply),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
 
+@app.get("/model-info")
+async def model_info() -> dict[str, Any]:
+    model, _ = _get_model_and_enc()
+    return {
+        "model": _MODEL_SIZE,
+        "parameters_M": round(model.num_parameters() / 1e6, 1),
+        "context_len": model.cfg.context_len,
+        "device": _DEVICE,
+        "implementation": "from-scratch (model/transformer.py)",
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
-
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=False)
