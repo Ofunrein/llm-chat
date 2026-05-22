@@ -17,9 +17,20 @@ wheels/
 .ruff_cache/
 .pytest_cache/
 .vercel
+.python-version
 
-# Data — binaries too large for git; use model/data.py or model/synthetic_data.py to regenerate
+# macOS
+.DS_Store
+
+# Data — regenerate via model/data.py or model/synthetic_data.py
 data/*.bin
 data/*.txt
 tokenizer.json
 checkpoints/
+
+# GoalBuddy board (internal planning, not product)
+docs/goals/
+
+# Unused legacy dirs
+api/
+static/
