@@ -14,10 +14,10 @@ RUN pip3 install --no-cache-dir \
     "fastapi>=0.115" \
     "uvicorn[standard]>=0.30" \
     "tiktoken>=0.7" \
-    "transformers>=4.40" \
+    "transformers>=4.40,<5.0" \
     "python-dotenv>=1.0" && \
     python3 -c "import torch; print('torch', torch.__version__)" && \
-    python3 -c "from transformers import GPT2LMHeadModel; print('transformers OK')"
+    python3 -c "from transformers import GPT2LMHeadModel; m=GPT2LMHeadModel.from_pretrained('gpt2'); print('GPT-2 load test OK, params:', sum(p.numel() for p in m.parameters())//1000000, 'M')"
 
 COPY . .
 
