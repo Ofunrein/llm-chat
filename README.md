@@ -1,15 +1,19 @@
+---
+title: LLM Chat
+emoji: ✦
+colorFrom: indigo
+colorTo: violet
+sdk: docker
+pinned: false
+license: mit
+---
+
 # llm-chat
 
 A production-quality LLM project in two parts:
 
-1. **Chat app** — streaming multimodal chat interface (Flask + Claude API, deployable to Vercel)
+1. **Chat app** — streaming multimodal chat interface (FastAPI + Claude API, deployable to Vercel & HF Spaces)
 2. **LLM from scratch** — GPT-style transformer + BPE tokenizer implemented with PyTorch, no Hugging Face
-
----
-
-## Demo
-
-> **Live demo:** deployed on Vercel — see below after setup
 
 ---
 
@@ -17,7 +21,7 @@ A production-quality LLM project in two parts:
 
 ```
 llm-chat/
-├── app.py              # Flask app — SSE streaming, multimodal endpoints
+├── app.py              # FastAPI — async SSE streaming, multimodal endpoints
 ├── static/
 │   ├── css/main.css    # Dark glassmorphism UI
 │   └── js/main.js      # Streaming SSE client, drag-and-drop images
@@ -29,6 +33,7 @@ llm-chat/
 │   └── train.py        # Training loop — cosine LR, gradient clipping, WandB
 ├── tests/
 │   └── test_app.py     # pytest unit + integration tests
+├── Dockerfile          # HF Spaces + self-host
 ├── vercel.json         # Vercel Python deployment config
 └── pyproject.toml      # uv-managed dependencies
 ```
@@ -39,43 +44,45 @@ llm-chat/
 
 ### Features
 
-- **Streaming responses** via Server-Sent Events (SSE) — token-by-token output
+- **Streaming responses** via Server-Sent Events — token-by-token output with `asyncio`
 - **Multimodal input** — attach or drag-and-drop images; Claude analyzes them alongside text
 - **Multi-turn history** — full conversation context sent on each request
 - **Dark glassmorphism UI** — animated gradient orbs, custom-styled chat bubbles
-- **Zero JS frameworks** — vanilla ES2022, no React/Vue, fast first paint
+- **Zero JS frameworks** — vanilla ES2022, fast first paint
+- **Auto-generated API docs** — FastAPI `/docs` endpoint (OpenAPI 3.1)
 
 ### Quick start
 
 ```bash
-# 1. clone
 git clone https://github.com/Ofunrein/llm-chat && cd llm-chat
-
-# 2. install dependencies (requires uv)
 uv sync
-
-# 3. set your API key
-cp .env.example .env
-# edit .env → ANTHROPIC_API_KEY=sk-ant-...
-
-# 4. run
+cp .env.example .env  # add ANTHROPIC_API_KEY
 uv run python app.py
-# → http://localhost:5000
+# → http://localhost:8000  |  API docs: http://localhost:8000/docs
 ```
 
-### Deploy to Vercel
+### Deploy — Vercel
 
 ```bash
-npm i -g vercel
 vercel --prod
-# set env var: ANTHROPIC_API_KEY in Vercel dashboard
+# set ANTHROPIC_API_KEY in Vercel dashboard → Environment Variables
+```
+
+### Deploy — Hugging Face Spaces
+
+```bash
+huggingface-cli login
+huggingface-cli repo create llm-chat --type space --space-sdk docker
+git remote add hf https://huggingface.co/spaces/Ofunrein/llm-chat
+git push hf main
+# set ANTHROPIC_API_KEY in Space Settings → Repository secrets
 ```
 
 ---
 
 ## LLM From Scratch
 
-A clean, well-commented implementation of the GPT architecture — no `transformers` library, no abstraction layers.
+Clean, well-commented GPT implementation — no `transformers`, no abstraction layers.
 
 ### What's implemented
 
@@ -83,7 +90,7 @@ A clean, well-commented implementation of the GPT architecture — no `transform
 |---|---|---|
 | Multi-head causal self-attention | `model/transformer.py` | Fused QKV, causal mask, scaled dot-product |
 | Feed-forward network | `model/transformer.py` | GELU, pre-LayerNorm residual |
-| Positional + token embeddings | `model/transformer.py` | Learned, weight-tied LM head |
+| Token + positional embeddings | `model/transformer.py` | Learned, weight-tied LM head |
 | Weight initialisation | `model/transformer.py` | GPT-2 style, residual scaling |
 | Top-k sampling + temperature | `model/transformer.py` | `model.generate()` |
 | BPE tokenizer | `model/tokenizer.py` | Full train/encode/decode/save/load |
@@ -99,51 +106,14 @@ A clean, well-commented implementation of the GPT architecture — no `transform
 | `GPT.gpt2_large()` | 36 | 1280 | 20 | ~762M |
 | `GPT.gpt2_xl()` | 48 | 1600 | 25 | ~1.5B |
 
-### Train a model
+### Train (tiny demo)
 
 ```bash
-# tokenise your dataset first (e.g. TinyShakespeare)
-python -c "
-import numpy as np
-text = open('data/input.txt').read()
-from model.tokenizer import BPETokenizer
-tok = BPETokenizer()
-tok.train(text, vocab_size=1000)
-ids = tok.encode(text)
-np.array(ids, dtype=np.uint16).tofile('data/train.bin')
-tok.save('tokenizer.json')
-"
-
-# train (CPU demo — use --device cuda for real training)
 python -m model.train \
   --data data/train.bin \
   --vocab-size 1000 \
-  --n-layers 4 \
-  --d-model 128 \
-  --n-heads 4 \
-  --context-len 256 \
-  --batch-size 4 \
-  --max-steps 2000 \
-  --device cpu
-```
-
-### Run inference
-
-```python
-import torch
-from model.transformer import GPT, TransformerConfig
-from model.tokenizer import BPETokenizer
-
-tok = BPETokenizer.load("tokenizer.json")
-cfg = TransformerConfig(vocab_size=len(tok), n_layers=4, d_model=128, n_heads=4, context_len=256)
-model = GPT(cfg)
-model.load_state_dict(torch.load("checkpoints/ckpt_0002000.pt")["model"])
-model.eval()
-
-prompt = tok.encode("To be or not to be")
-idx = torch.tensor([prompt])
-out = model.generate(idx, max_new_tokens=100, temperature=0.8, top_k=40)
-print(tok.decode(out[0].tolist()))
+  --n-layers 4 --d-model 128 --n-heads 4 \
+  --context-len 256 --batch-size 4 --max-steps 2000
 ```
 
 ---
@@ -161,12 +131,12 @@ uv run pytest tests/ -v
 | Layer | Choice | Why |
 |---|---|---|
 | Language | Python 3.12 | Type hints, modern syntax |
-| Web framework | Flask | Lightweight, SSE-friendly |
+| Web framework | **FastAPI** | Async-native, `StreamingResponse`, OpenAPI docs |
 | LLM API | Anthropic Claude | Best-in-class reasoning + vision |
 | Deep learning | PyTorch | Imperative, debuggable, industry standard |
 | Package manager | uv | 10–100× faster than pip |
 | Linting | ruff + mypy | Fast, strict |
-| Deploy | Vercel | Zero-config, free tier |
+| Deploy | Vercel + HF Spaces | Zero-config, free tier |
 
 ---
 
