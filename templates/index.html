@@ -11,10 +11,10 @@
     *,::before,::after{box-sizing:border-box;margin:0;padding:0}
     :root{
       --bg:#060608;--bg2:#0d0d14;--surface:rgba(255,255,255,.045);
-      --border:rgba(255,255,255,.07);--border-hi:rgba(139,92,246,.55);
+      --border:rgba(255,255,255,.07);--border-hi:rgba(234,88,12,.55);
       --text:#dde1f0;--muted:#52566e;--muted2:#333548;
-      --accent:#7c3aed;--accent2:#a78bfa;--accent3:#c4b5fd;
-      --user-grad:linear-gradient(135deg,#6d28d9,#7c3aed,#8b5cf6);
+      --accent:#ea580c;--accent2:#fb923c;--accent3:#fed7aa;
+      --user-grad:linear-gradient(135deg,#c2410c,#ea580c,#f97316);
       --bot-surface:rgba(255,255,255,.04);
       --green:#22d3ee;--r:20px;
     }
@@ -30,7 +30,7 @@
     .header{display:flex;align-items:center;justify-content:space-between;padding:18px 0 14px;border-bottom:1px solid var(--border);flex-shrink:0;gap:12px}
     .logo{display:flex;align-items:center;gap:10px;text-decoration:none}
     .logo svg{flex-shrink:0}
-    .logo-text{font-size:1.05rem;font-weight:700;letter-spacing:-.03em;background:linear-gradient(135deg,#fff 30%,var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .logo-text{font-size:1.05rem;font-weight:700;letter-spacing:-.03em;color:#fff}
     .badges{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
     .badge{display:flex;align-items:center;gap:5px;background:var(--surface);border:1px solid var(--border);border-radius:99px;padding:3px 10px;font-size:.72rem;color:var(--muted);white-space:nowrap;font-family:'JetBrains Mono',monospace}
     .badge.live .dot{animation:pulse 2s infinite}
@@ -97,7 +97,7 @@
         <circle cx="13" cy="20" r="1.5" fill="url(#g1)" opacity=".5"/>
         <defs>
           <linearGradient id="g1" x1="1" y1="1" x2="25" y2="25" gradientUnits="userSpaceOnUse">
-            <stop stop-color="#7c3aed"/><stop offset="1" stop-color="#c4b5fd"/>
+            <stop stop-color="#ea580c"/><stop offset="1" stop-color="#fed7aa"/>
           </linearGradient>
         </defs>
       </svg>
@@ -147,9 +147,9 @@
 (function(){
   const c=document.getElementById('c'),ctx=c.getContext('2d');
   const orbs=[
-    {x:.15,y:.2,r:380,h:260,s:.7,dx:.0003,dy:.0002},
-    {x:.85,y:.75,r:300,h:230,s:.5,dx:-.0002,dy:.0003},
-    {x:.5,y:.5,r:200,h:190,s:.3,dx:.0002,dy:-.0002},
+    {x:.15,y:.2,r:380,h:25,s:.7,dx:.0003,dy:.0002},
+    {x:.85,y:.75,r:300,h:30,s:.5,dx:-.0002,dy:.0003},
+    {x:.5,y:.5,r:200,h:20,s:.3,dx:.0002,dy:-.0002},
   ];
   function resize(){c.width=innerWidth;c.height=innerHeight}
   resize();window.addEventListener('resize',resize);
@@ -206,6 +206,7 @@ async function submit(){
     const res=await fetch('/chat',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({message:text,history:snap}),
+      signal:AbortSignal.timeout(45000),
     });
     if(!res.ok)throw new Error(`${res.status} ${await res.text()}`);
     const reader=res.body.getReader(),dec=new TextDecoder();
@@ -256,6 +257,7 @@ function md(s){
 fetch('/model-info').then(r=>r.json()).then(d=>{
   const el=document.getElementById('model-label');
   if(d.params_M)el.textContent=`${d.model} · ${d.params_M}M params · from scratch`;
+  else if(d.status)el.textContent=d.status;
 }).catch(()=>{});
 </script>
 </body>

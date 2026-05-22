@@ -37,7 +37,7 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 _DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-_MAX_NEW = int(os.getenv("MAX_NEW_TOKENS", "200"))
+_MAX_NEW = int(os.getenv("MAX_NEW_TOKENS", "80"))
 _TEMPERATURE = float(os.getenv("TEMPERATURE", "0.85"))
 _TOP_K = int(os.getenv("TOP_K", "40"))
 _CHECKPOINT = os.getenv("CHECKPOINT_PATH", "")

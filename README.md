@@ -37,8 +37,19 @@ llm-chat/
 │   ├── tokenizer.py     # BPE tokenizer from scratch: train, encode, decode, save, load
 │   ├── train.py         # Training loop: AdamW, cosine LR, warmup, grad clip, WandB
 │   └── load_gpt2.py     # Load pretrained GPT-2 weights into our transformer (weight mapping)
+│   ├── data.py          # arXiv dataset downloader + BPE tokenization pipeline
+│   ├── synthetic_data.py # Synthetic ML abstract generator for local dev
+│   └── eval.py          # Perplexity evaluation on val set
+├── scripts/
+│   └── train_e2e.sh     # End-to-end: download → tokenize → train → eval
+├── configs/
+│   └── train_arxiv_small.sh
 ├── tests/
-│   └── test_app.py      # pytest — 5 tests, no GPU required
+│   ├── test_app.py      # pytest — 17 tests, no GPU required
+│   ├── test_training.py # train→checkpoint→inference integration
+│   ├── test_transformer.py
+│   ├── test_tokenizer.py
+│   └── test_data.py
 ├── Dockerfile           # HF Spaces deployment (torch CPU, uvicorn)
 └── pyproject.toml       # uv-managed deps
 ```
@@ -113,7 +124,7 @@ python -m model.train \
 ## Tests
 
 ```bash
-uv run pytest tests/ -v   # 5 tests, no GPU needed
+uv run pytest tests/ -v   # 17 tests, no GPU needed
 ```
 
 ---
@@ -122,7 +133,7 @@ uv run pytest tests/ -v   # 5 tests, no GPU needed
 
 | Layer | Choice | Why |
 |---|---|---|
-| Language | Python 3.12 | Type hints throughout |
+| Language | Python 3.11 | Type hints throughout |
 | Framework | FastAPI | Async-native, `StreamingResponse`, OpenAPI docs at `/docs` |
 | Inference | PyTorch (CPU/CUDA) | The from-scratch transformer |
 | Package manager | uv | 10–100× faster than pip |
