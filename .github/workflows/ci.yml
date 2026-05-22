@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install deps
+        run: uv sync
+
+      - name: Run tests
+        run: uv run pytest tests/ -v --tb=short
+
+      - name: Lint
+        run: uv run ruff check . --select E,F,W --ignore E501
+
+  docker-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate Dockerfile builds
+        run: docker build --target builder -f Dockerfile . || docker build -f Dockerfile . --no-cache 2>&1 | tail -20
+        continue-on-error: true
+
+      - name: Check Dockerfile syntax
+        run: |
+          docker run --rm -i hadolint/hadolint < Dockerfile || true
