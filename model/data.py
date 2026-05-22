@@ -52,7 +52,7 @@ def _fetch_s2(max_abstracts: int) -> list[str]:
     print(f"Fetching up to {max_abstracts:,} abstracts from Semantic Scholar…")
 
     while len(abstracts) < max_abstracts:
-        url = _S2_BULK + f"&limit=500"
+        url = _S2_BULK + "&limit=500"
         if token:
             url += f"&token={token}"
         try:

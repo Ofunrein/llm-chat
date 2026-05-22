@@ -62,9 +62,11 @@ def generate(n: int = 10_000, seed: int = 42) -> list[str]:
 
 if __name__ == "__main__":
     import argparse
+
     import numpy as np
+
+    from model.data import _build_corpus
     from model.tokenizer import BPETokenizer
-    from model.data import _build_corpus, _SEP
 
     p = argparse.ArgumentParser()
     p.add_argument("--n", type=int, default=10_000)

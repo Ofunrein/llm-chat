@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import importlib
 import sys
 import types
 from unittest.mock import MagicMock
 
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

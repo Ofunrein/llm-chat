@@ -25,7 +25,6 @@ from torch.optim import AdamW
 
 from model.transformer import GPT, TransformerConfig
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -93,9 +92,7 @@ def train(args: argparse.Namespace) -> None:
     model = GPT(cfg).to(device)
     print(f"Parameters: {model.num_parameters() / 1e6:.2f}M")
 
-    # optional bf16 / fp16 autocast
     dtype = torch.bfloat16 if (device.type == "cuda" and torch.cuda.is_bf16_supported()) else torch.float32
-    ctx = torch.amp.autocast(device_type=device.type, dtype=dtype) if device.type == "cuda" else torch.inference_mode.__class__
 
     # --- optimiser ---
     optimizer = AdamW(

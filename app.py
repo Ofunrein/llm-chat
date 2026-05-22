@@ -75,6 +75,7 @@ def _load_model() -> None:
             log.info("Loaded fine-tuned checkpoint: %s", _CHECKPOINT)
         else:
             import tiktoken
+
             from model.load_gpt2 import load_gpt2
             log.info("Loading GPT-2 (%s)…", _GPT2_MODEL)
             enc = tiktoken.get_encoding("gpt2")

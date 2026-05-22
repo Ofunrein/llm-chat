@@ -11,33 +11,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          node-version: "24"
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: Install uv
         run: pip install uv
 
-      - name: Install deps
-        run: uv sync
+      - name: Install deps (torch CPU from whl index)
+        run: |
+          uv venv
+          uv pip install torch==2.2.2 --index-url https://download.pytorch.org/whl/cpu
+          uv pip install "fastapi>=0.115" "uvicorn[standard]>=0.30" \
+            "tiktoken>=0.7" "transformers>=4.40,<5.0" "python-dotenv>=1.0" \
+            "numpy>=1.26" "pytest>=9.0" "pytest-asyncio>=0.23" \
+            "httpx>=0.28" "ruff>=0.5"
 
       - name: Run tests
         run: uv run pytest tests/ -v --tb=short
 
       - name: Lint
-        run: uv run ruff check . --select E,F,W --ignore E501
-
-  docker-validate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Validate Dockerfile builds
-        run: docker build --target builder -f Dockerfile . || docker build -f Dockerfile . --no-cache 2>&1 | tail -20
-        continue-on-error: true
-
-      - name: Check Dockerfile syntax
-        run: |
-          docker run --rm -i hadolint/hadolint < Dockerfile || true
+        run: uv run ruff check . --select E,F,W,I --ignore E501
