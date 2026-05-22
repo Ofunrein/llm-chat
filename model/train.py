@@ -156,6 +156,11 @@ def train(args: argparse.Namespace) -> None:
             torch.save({"model": model.state_dict(), "optimizer": optimizer.state_dict(), "step": step, "config": cfg}, ckpt_path)
             print(f"Saved {ckpt_path}")
 
+    # always save final checkpoint
+    final_path = out_dir / f"ckpt_{args.max_steps:07d}.pt"
+    torch.save({"model": model.state_dict(), "optimizer": optimizer.state_dict(), "step": args.max_steps, "config": cfg}, final_path)
+    print(f"Saved final checkpoint → {final_path}")
+
     if run:
         run.finish()
 
