@@ -1,0 +1,89 @@
+goal:
+  slug: llm-chat
+  title: "LLM Chat App — LLM Chat"
+  status: active
+  created: "2026-05-22"
+  agents:
+    scout: bundled_not_installed
+    worker: bundled_not_installed
+    judge: bundled_not_installed
+
+tasks:
+  - id: T001
+    type: scout
+    assignee: Scout
+    status: done
+    objective: "Determine best Python LLM app stack and design pattern for a impressive portfolio repo."
+    receipt:
+      result: done
+      summary: |
+        Best stack for production-level portfolio Python LLM app:
+        - Backend: FastAPI (async, type hints, OpenAPI docs — impresses SWE interviewers)
+        - UI: Gradio with custom CSS (fastest to impressive, built-in streaming, chat interface)
+        - Alt: Streamlit — fine but less differentiated
+        - Model: Claude claude-sonnet-4-6 via Anthropic SDK with streaming
+        - Package manager: uv (modern, impresses Python-aware engineers)
+        - Tests: pytest + httpx async client
+        - Linting: ruff + mypy
+        - README: badges, demo GIF, architecture diagram (ASCII or Mermaid)
+        - Deploy: Hugging Face Spaces (free, one-command, great for AI demos)
+        Decision: FastAPI backend + Gradio frontend, streaming SSE, multi-turn history, system prompt config, dark theme. Repo name: llm-chat.
+
+  - id: T002
+    type: worker
+    assignee: Worker
+    status: active
+    objective: "Build complete Python LLM chat app: FastAPI + Gradio, streaming, multi-turn history, polished README, tests, ruff/mypy config. Create all source files in ~/Developer/llm-chat/."
+    allowed_files:
+      - "~/Developer/llm-chat/**"
+      - "/Users/martinofunrein/Developer/llm-chat/**"
+    verify:
+      - "cd ~/Developer/llm-chat && uv run python -c 'import app' 2>&1 | head -5"
+      - "cd ~/Developer/llm-chat && uv run pytest tests/ -q 2>&1 | tail -10"
+      - "cd ~/Developer/llm-chat && uv run ruff check . 2>&1 | tail-5"
+    stop_if:
+      - "Anthropic API key not available in env"
+      - "uv not installed"
+    receipt: null
+
+  - id: T003
+    type: worker
+    assignee: Worker
+    status: queued
+    objective: "Init public GitHub repo 'llm-chat' under Ofunrein, push all code, add topics and description."
+    allowed_files:
+      - "~/Developer/llm-chat/**"
+    verify:
+      - "gh repo view Ofunrein/llm-chat --json visibility,url | python3 -c \"import sys,json; d=json.load(sys.stdin); assert d['visibility']=='PUBLIC'\""
+    stop_if:
+      - "gh auth status fails"
+    receipt: null
+
+  - id: T004
+    type: worker
+    assignee: Worker
+    status: queued
+    objective: "Deploy to Hugging Face Spaces for live demo URL. Add badge and demo link to README. Push updated README."
+    allowed_files:
+      - "~/Developer/llm-chat/**"
+    verify:
+      - "curl -s https://huggingface.co/spaces/Ofunrein/llm-chat | grep -i gradio"
+    stop_if:
+      - "HF_TOKEN not available"
+      - "HF Space creation fails twice"
+    receipt: null
+
+  - id: T999
+    type: judge
+    assignee: Judge
+    status: queued
+    objective: "Audit: is the repo public, does the app run, is the UI impressive, does it look like senior engineer work?"
+    inputs:
+      - "All done task receipts"
+      - "gh repo view output"
+      - "Live demo URL"
+    expected_output:
+      - "complete | not_complete"
+      - "full_outcome_complete: true | false"
+      - "What still needs fixing"
+    receipt: null

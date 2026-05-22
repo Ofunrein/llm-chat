@@ -1,0 +1,20 @@
+[project]
+name = "llm-chat"
+version = "0.1.0"
+description = "Streaming multimodal LLM chat — Flask + Claude"
+requires-python = ">=3.12"
+dependencies = [
+    "anthropic>=0.104.0",
+    "flask>=3.1.3",
+    "flask-cors>=6.0.2",
+    "python-dotenv>=1.2.2",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "mypy>=2.1.0",
+    "pytest>=9.0.3",
+    "pytest-asyncio>=1.3.0",
+    "ruff>=0.15.14",
+]
