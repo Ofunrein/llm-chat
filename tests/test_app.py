@@ -26,14 +26,16 @@ _torch.no_grad = MagicMock(return_value=MagicMock(__enter__=MagicMock(return_val
 _tiktoken = sys.modules["tiktoken"]
 _tiktoken.get_encoding = MagicMock(return_value=MagicMock())  # type: ignore[attr-defined]
 
-for n in ["model", "model.transformer", "model.load_gpt2"]:
+# stub only the specific sub-modules app.py imports — NOT model itself
+for n in ["model.transformer", "model.load_gpt2"]:
     stub(n)
-
-_lgpt2 = sys.modules["model.load_gpt2"]
-_lgpt2.load_gpt2 = MagicMock(return_value=MagicMock())  # type: ignore[attr-defined]
 
 _mt = sys.modules["model.transformer"]
 _mt.GPT = MagicMock()  # type: ignore[attr-defined]
+_mt.TransformerConfig = MagicMock()  # type: ignore[attr-defined]
+
+_lgpt2 = sys.modules["model.load_gpt2"]
+_lgpt2.load_gpt2 = MagicMock(return_value=MagicMock())  # type: ignore[attr-defined]
 
 # safe to import now
 from app import _build_prompt, app  # noqa: E402
@@ -44,16 +46,16 @@ client = TestClient(app)
 
 def test_build_prompt_empty_history() -> None:
     p = _build_prompt([], "Hello")
-    assert "Human: Hello" in p
-    assert "Assistant:" in p
+    assert "Topic: Hello" in p
+    assert "Abstract:" in p
 
 
 def test_build_prompt_with_history() -> None:
-    h = [{"role": "user", "content": "Hi"}, {"role": "assistant", "content": "Hey!"}]
-    p = _build_prompt(h, "How are you?")
-    assert "User: Hi" in p
-    assert "Assistant: Hey!" in p
-    assert "Human: How are you?" in p
+    h = [{"role": "user", "content": "attention mechanisms"}, {"role": "assistant", "content": "We propose"}]
+    p = _build_prompt(h, "transformers")
+    assert "Topic: attention mechanisms" in p
+    assert "Abstract: We propose" in p
+    assert "Topic: transformers" in p
 
 
 def test_index_ok() -> None:

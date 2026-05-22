@@ -17,3 +17,9 @@ wheels/
 .ruff_cache/
 .pytest_cache/
 .vercel
+
+# Data — binaries too large for git; use model/data.py or model/synthetic_data.py to regenerate
+data/*.bin
+data/*.txt
+tokenizer.json
+checkpoints/
