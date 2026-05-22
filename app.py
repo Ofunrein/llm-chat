@@ -20,15 +20,27 @@ from typing import Any
 
 import torch
 from dotenv import load_dotenv
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+
+
+@asynccontextmanager
+async def _lifespan(app: FastAPI):  # type: ignore[type-arg]
+    loop = asyncio.get_event_loop()
+    loop.run_in_executor(None, _get_model)
+    yield
+
+
+app = FastAPI(title="LLM Chat — From Scratch", version="1.0.0", lifespan=_lifespan)
 from pydantic import BaseModel
 
 from model.transformer import GPT, TransformerConfig
 
 load_dotenv()
 
-app = FastAPI(title="LLM Chat — From Scratch", version="1.0.0")
+app = FastAPI(title="LLM Chat — From Scratch", version="1.0.0", lifespan=_lifespan)
 
 _DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 _MAX_NEW = int(os.getenv("MAX_NEW_TOKENS", "256"))
@@ -158,18 +170,24 @@ async def chat(req: ChatRequest) -> StreamingResponse:
 
 
 @app.get("/model-info")
-async def model_info() -> dict[str, Any]:
+async def model_info() -> JSONResponse:
+    if _model is None:
+        return JSONResponse({
+            "backend": _backend_name,
+            "status": "loading — first request may be slow",
+            "device": _DEVICE,
+        })
     try:
         mdl = _get_model()
-        return {
+        return JSONResponse({
             "backend": _backend_name,
             "params_M": round(mdl.num_parameters() / 1e6, 1),
             "device": _DEVICE,
             "context_len": mdl.cfg.context_len,
             "implementation": "model/transformer.py",
-        }
+        })
     except Exception as e:
-        return {"error": str(e)}
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 
 @app.get("/health")
