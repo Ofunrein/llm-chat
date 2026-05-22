@@ -230,6 +230,32 @@ async def health() -> dict[str, str]:
     return {"status": "ok", "model": "ready" if _model else "loading"}
 
 
+@app.get("/debug")
+async def debug() -> JSONResponse:
+    """Show installed packages and import status — remove before prod."""
+    import importlib.util
+    import subprocess
+    import sys
+
+    torch_spec = importlib.util.find_spec("torch")
+    info: dict[str, Any] = {
+        "python": sys.version,
+        "torch_spec": str(torch_spec),
+        "model_error": _load_error,
+        "model_loaded": _model is not None,
+    }
+    try:
+        result = subprocess.run(
+            ["pip3", "list", "--format=columns"],
+            capture_output=True, text=True, timeout=10
+        )
+        lines = [l for l in result.stdout.splitlines() if any(k in l.lower() for k in ["torch", "transform", "tiktoken", "fastapi"])]
+        info["installed"] = lines
+    except Exception as e:
+        info["pip_error"] = str(e)
+    return JSONResponse(info)
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app:app", host="0.0.0.0", port=7860, reload=False)
