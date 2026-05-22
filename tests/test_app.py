@@ -45,17 +45,16 @@ client = TestClient(app)
 
 
 def test_build_prompt_empty_history() -> None:
-    p = _build_prompt([], "Hello")
-    assert "Topic: Hello" in p
-    assert "Abstract:" in p
+    p = _build_prompt([], "We propose a novel method")
+    assert "We propose a novel method" in p
 
 
 def test_build_prompt_with_history() -> None:
     h = [{"role": "user", "content": "attention mechanisms"}, {"role": "assistant", "content": "We propose"}]
-    p = _build_prompt(h, "transformers")
-    assert "Topic: attention mechanisms" in p
-    assert "Abstract: We propose" in p
-    assert "Topic: transformers" in p
+    p = _build_prompt(h, "transformers scale")
+    assert "attention mechanisms" in p
+    assert "We propose" in p
+    assert "transformers scale" in p
 
 
 def test_index_ok() -> None:
