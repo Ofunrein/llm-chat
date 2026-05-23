@@ -1,13 +1,3 @@
----
-title: LLM Chat
-emoji: 💬
-colorFrom: indigo
-colorTo: purple
-sdk: docker
-pinned: false
-license: mit
----
-
 # llm-chat
 
 Production-quality LLM project in two parts:
