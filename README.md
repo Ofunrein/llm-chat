@@ -1,3 +1,14 @@
+---
+title: LLM Chat
+emoji: 💬
+colorFrom: indigo
+colorTo: purple
+sdk: docker
+pinned: false
+license: mit
+short_description: GPT-2 medium running on a from-scratch PyTorch transformer
+---
+
 # llm-chat
 
 Production-quality LLM project in two parts:
