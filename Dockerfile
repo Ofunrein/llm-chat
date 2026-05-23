@@ -17,15 +17,15 @@ RUN pip3 install --no-cache-dir \
     "transformers>=4.40,<5.0" \
     "python-dotenv>=1.0" && \
     python3 -c "import torch; print('torch', torch.__version__)" && \
-    python3 -c "from transformers import GPT2LMHeadModel; m=GPT2LMHeadModel.from_pretrained('gpt2'); print('GPT-2 load test OK, params:', sum(p.numel() for p in m.parameters())//1000000, 'M')"
+    python3 -c "from transformers import GPT2LMHeadModel; m=GPT2LMHeadModel.from_pretrained('gpt2-medium'); print('GPT-2 medium load test OK, params:', sum(p.numel() for p in m.parameters())//1000000, 'M')"
 
 COPY . .
 
 EXPOSE 7860
 
-ENV GPT2_MODEL=gpt2
+ENV GPT2_MODEL=gpt2-medium
 ENV MAX_NEW_TOKENS=80
-ENV TEMPERATURE=0.85
+ENV TEMPERATURE=0.7
 ENV TOP_K=40
 
 CMD ["python3", "-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "7860"]
