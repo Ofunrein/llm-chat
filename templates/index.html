@@ -251,7 +251,7 @@ function md(s){
 
 fetch('/model-info').then(r=>r.json()).then(d=>{
   const el=document.getElementById('model-label');
-  if(d.params_M)el.textContent=`${d.model} · ${d.params_M}M params · from scratch`;
+  if(d.params_M)el.textContent=`${d.backend} · ${d.params_M}M params · from scratch`;
   else if(d.status)el.textContent=d.status;
 }).catch(()=>{});
 </script>

@@ -38,11 +38,20 @@ log = logging.getLogger(__name__)
 
 _DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 _MAX_NEW = int(os.getenv("MAX_NEW_TOKENS", "80"))
-_TEMPERATURE = float(os.getenv("TEMPERATURE", "0.85"))
+_TEMPERATURE = float(os.getenv("TEMPERATURE", "0.7"))
 _TOP_K = int(os.getenv("TOP_K", "40"))
 _CHECKPOINT = os.getenv("CHECKPOINT_PATH", "")
 _GPT2_MODEL = os.getenv("GPT2_MODEL", "gpt2")
 _EOT = 50256
+
+_FEWSHOT = (
+    "The following is a question-answering assistant. It answers each question "
+    "concisely and factually.\n\n"
+    "Q: What is the capital of France?\nA: Paris.\n\n"
+    "Q: Who wrote Romeo and Juliet?\nA: William Shakespeare.\n\n"
+    "Q: What is the largest planet in our solar system?\nA: Jupiter.\n\n"
+    "Q: What is 2 plus 2?\nA: 4.\n\n"
+)
 
 # ---------------------------------------------------------------------------
 # Model state
@@ -127,16 +136,31 @@ app = FastAPI(title="LLM Chat — From Scratch", version="1.0.0", lifespan=_life
 
 def _build_prompt(history: list[dict[str, Any]], message: str) -> str:
     """
-    Build a plain-text continuation prompt.
-    GPT-2 (WebText-trained) works best with natural prose continuation.
+    Few-shot Q/A prompt. Base GPT-2 is a continuation model — framing user
+    turns as `Q:` / `A:` pairs steers it toward direct answers and lets us
+    stop on the next `Q:`.
     """
-    parts: list[str] = []
-    for t in history:
-        content = t.get("content", "")
-        if isinstance(content, str) and content.strip():
-            parts.append(content.strip())
-    parts.append(message.strip())
-    return " ".join(parts)
+    parts: list[str] = [_FEWSHOT]
+    turns = list(history) + [{"role": "user", "content": message}]
+    pending_q: str | None = None
+    for t in turns:
+        role = t.get("role", "")
+        content = (t.get("content") or "").strip()
+        if not content:
+            continue
+        if role == "user":
+            if pending_q is not None:
+                parts.append(f"Q: {pending_q}\nA:\n\n")
+            pending_q = content
+        else:
+            if pending_q is not None:
+                parts.append(f"Q: {pending_q}\nA: {content}\n\n")
+                pending_q = None
+            else:
+                parts.append(content + "\n\n")
+    if pending_q is not None:
+        parts.append(f"Q: {pending_q}\nA:")
+    return "".join(parts)
 
 
 def _run_inference(prompt: str) -> str:
@@ -155,16 +179,16 @@ def _run_inference(prompt: str) -> str:
         )
 
     new_ids = out[0, len(ids):].tolist()
-    # stop at <|endoftext|>
     if _EOT in new_ids:
         new_ids = new_ids[: new_ids.index(_EOT)]
     if not new_ids:
         return "[model returned empty output — try a different prompt]"
     text = _decode(new_ids)
-    # trim at double newline (paragraph boundary)
-    if "\n\n" in text:
-        text = text[: text.index("\n\n")]
-    return text.strip()
+    # stop at next Q: turn or paragraph break
+    for stop in ("\nQ:", "\n\nQ:", "\n\n"):
+        if stop in text:
+            text = text[: text.index(stop)]
+    return text.strip() or "[no answer]"
 
 
 async def _sse_stream(message: str, history: list[dict[str, Any]]) -> AsyncGenerator[str, None]:
